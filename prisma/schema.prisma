@@ -12,3 +12,77 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  bio           String?   // プロフィール文
+  image         String?   // プロフィール画像URL
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // リレーション
+  posts         Post[]    // ユーザーの投稿
+  likes         Like[]    // ユーザーのいいね
+  replies       Reply[]   // ユーザーの返信
+  followers     Follow[]  @relation("following")
+  following     Follow[]  @relation("follower")
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  content       String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // リレーション
+  userId        String    // 投稿者のID
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes         Like[]    // 投稿へのいいね
+  replies       Reply[]   // 投稿への返信
+
+  @@index([userId])
+}
+
+model Like {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+
+  userId     String
+  postId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])  // 同じユーザーが同じ投稿に複数回いいねできないように
+  @@index([userId])
+  @@index([postId])
+}
+
+model Reply {
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId     String
+  postId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([postId])
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String   // フォローするユーザー
+  followingId String   // フォローされるユーザー
+  createdAt   DateTime @default(now())
+
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])  // 同じユーザーを複数回フォローできないように
+  @@index([followerId])
+  @@index([followingId])
+}
