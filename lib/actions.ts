@@ -58,3 +58,46 @@ export async function addPostAction(prevState:State ,formData: FormData): Promis
       }
     }
   }
+
+   // Like action
+export async function likeAction(postId: string) {
+    try {
+      const { userId } = auth();
+  
+      if (!userId) {
+        throw new Error("You must be logged in to like a post");
+      }
+  
+      const existingLike = await prisma.like.findFirst({
+        where: {
+          userId: userId,
+          postId: postId,
+        },
+      });
+  
+      if (existingLike) {
+        // Unlike if already liked
+        await prisma.like.delete({
+          where: {
+            id: existingLike.id,
+          },
+        });
+      } else {
+        // Create new like
+        await prisma.like.create({
+          data: {
+            userId: userId,
+            postId: postId,
+          },
+        });
+      }
+  
+      revalidatePath("/");
+      return { success: true };
+    } catch (error) {
+      if (error instanceof Error) {
+        return { error: error.message, success: false };
+      }
+      return { error: "An unknown error occurred", success: false };
+    }
+  }
